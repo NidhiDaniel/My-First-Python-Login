@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 36px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        a {
+            display: inline-block;
+            margin: 10px 0;
+            padding: 10px 15px;
+            background-color: #007BFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            display: inline-block;
+        }
+        .holidays { margin-top:18px; }
+        .holiday { padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
+        .date { color:#555; font-weight:600; }
+        .name { color:#222; }
+        .error { color:#a00; margin-top:12px; }
+        .loading { color:#666; margin-top:12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+    {% if user.is_authenticated %}
+        <h1>Welcome to the Home Page</h1>
+        <p>Welcome, {{ user.username }}!</p>
+        <p><a href="{% url 'logout_view' %}">Logout</a></p>
+    {% else %}
+        <h1>Welcome to the Home Page</h1>
+        <p><a href="{% url 'loginp' %}">Login</a> | <a href="{% url 'register' %}">Sign Up</a></p>
+    {% endif %}
+    <section class="holidays">
+        <h2>Upcoming Holidays</h2>
+        <div id="holiday-list">
+            </div>
+            <div id="holiday-status" class="loading">Loading upcomig holidays...</div>
+    </section>
+    </div>
+    <script>
+        (function() 
+        {
+            const holidayList = document.getElementById('holiday-list');
+            const holidayStatus = document.getElementById('holiday-status');
+
+            async function fetchHolidays() {
+                holidayStatus.textContent = 'Loading upcoming holidays...';
+                holidayList.innerHTML = '';
+                try {
+                    const response = await fetch('{% url "holidays_api" %}');
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.status);
+                    }
+                    const data = await response.json();
+                    if (!Array.isArray(data) || data.length === 0) {
+                        holidayStatus.textContent = 'No upcoming public holidays found.';
+                        return;
+                    }
+
+                    // show up to next 10 holidays
+                    const slice = data.slice(0, 10);
+                    slice.forEach(h => {
+                        const item = document.createElement('div');
+                        item.className = 'holiday';
+                        const name = document.createElement('div');
+                        name.className = 'name';
+                        name.textContent = h.localName || h.name || 'Unnamed holiday';
+                        const date = document.createElement('div');
+                        date.className = 'date';
+                        date.textContent = new Date(h.date).toLocaleDateString('en-IN', { year:'numeric', month:'short', day:'numeric' });
+                        item.appendChild(name);
+                        item.appendChild(date);
+                        holidayList.appendChild(item);
+                    });
+
+                    holidayStatus.textContent = '';
+                } catch (error) {
+                    holidayStatus.textContent = 'Failed to load holidays.';
+                    console.error('Error fetching holidays:', error);
+                }
+            }
+
+            fetchHolidays();
+        })();
+        function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+const csrftoken = getCookie('csrftoken');
+
+// Example fetch POST with CSRF
+fetch('/some/post/url/', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-CSRFToken': csrftoken
+  },
+  body: JSON.stringify({ foo: 'bar' })
+});
+    </script>
+</body>
+</html>
