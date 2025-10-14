@@ -60,19 +60,23 @@ body{
     right: -30px;
     bottom: -80px;
 }
-.sign_up{
-    height: 1000px;
+.container{
+    height: 125vh;
     width: 400px;
     background-color: rgba(255,255,255,0.13);
     position: absolute;
     transform: translate(-50%,-50%);
-    top: 50%;
+    top: 75%;
     left: 50%;
     border-radius: 10px;
     backdrop-filter: blur(10px);
     border: 2px solid rgba(255,255,255,0.1);
     box-shadow: 0 0 40px rgba(8,7,16,0.6);
     padding: 50px 35px;
+}
+.sign_up{
+    display: flex;
+    flex-direction: column;
 }
 .sign_up *{
     font-family: 'Poppins',sans-serif;
@@ -141,6 +145,36 @@ input{
 .social i{
   margin-right: 4px;
 }
+.alert {
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 500;
+}
+
+/* Message types */
+.alert-success {
+    background-color: #4BB543;
+    color: white;
+}
+.alert-danger {
+    background-color: #FF4C4C;
+    color: white;
+}
+.alert-error {
+    background-color: #FF4C4C;
+    color: white;
+}
+.alert-warning {
+    background-color: #FFA500;
+    color: white;
+}
+.alert-info {
+    background-color: #3498db;
+    color: white;
+}
 
     </style>
 </head>
@@ -149,9 +183,25 @@ input{
         <div class="shape"></div>
         <div class="shape"></div>
     </div>
+    <div class="container">
     <form  method="post" class="sign_up">
-        <h3>Sign Up </h3>
         {% csrf_token %}
+        <h3>Sign Up </h3>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                Please correct the errors below.
+            </div>
+        {% endif %}
+        {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
         <label for="username">Username</label>
         <input type="text" placeholder="Name" id="username" name="username">
 
@@ -169,5 +219,6 @@ input{
           <div class="fb"><i class="fab fa-facebook"></i>  Facebook</div>
         </div>
     </form>
+    </div>
 </body>
 </html>
