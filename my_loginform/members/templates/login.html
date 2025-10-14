@@ -131,6 +131,36 @@ input{
 .social i{
   margin-right: 4px;
 }
+.alert {
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 500;
+}
+
+/* Message types */
+.alert-success {
+    background-color: #4BB543;
+    color: white;
+}
+.alert-danger {
+    background-color: #FF4C4C;
+    color: white;
+}
+.alert-error {
+    background-color: #FF4C4C;
+    color: white;
+}
+.alert-warning {
+    background-color: #FFA500;
+    color: white;
+}
+.alert-info {
+    background-color: #3498db;
+    color: white;
+}
 
     </style>
 </head>
@@ -139,10 +169,25 @@ input{
         <div class="shape"></div>
         <div class="shape"></div>
     </div>
+   
     <form method="post" class="login">
 		{% csrf_token %}
         <h3>Login Here</h3>
-
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                Please correct the errors below.
+            </div>
+        {% endif %}
+        {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
         <label for="username">Username</label>
         <input type="text" placeholder="Email or Phone" id="username" name="username">
 

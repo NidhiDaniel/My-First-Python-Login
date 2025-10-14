@@ -91,7 +91,11 @@ def loginp(request):
             login(request, user)
             return redirect('index')
         else:
-            return redirect('register')
+            if not User.objects.filter(username=username).exists():
+                messages.error(request, "Username does not exist. Please register first.")
+            else:
+                messages.error(request, "Invalid credentials. Please try again.")   
+            return redirect('loginp')
     return render(request, 'login.html')
 def register(request):
     if request.method=="POST":
