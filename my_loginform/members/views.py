@@ -10,65 +10,77 @@ from django.contrib import messages
 from django.db import IntegrityError
 from django.http import JsonResponse
 from datetime import datetime,date
+import traceback
 
 # Create your views here.
 def index(request):
     return render(request, 'index.html')
 
+import requests
+from datetime import date, datetime
+from django.http import JsonResponse
+import traceback
+
 def holidays_api(request):
-    """
-    Robust proxy to Nager.Date (v3). Tries NextPublicHolidays, then PublicHolidays/2025.
-    Returns JSON list of holidays or a small static fallback on failure.
-    """
-    headers = {'User-Agent': 'my_loginform/1.0'}
-    country = request.GET.get('country', 'IN').upper()
     urls_to_try = [
-        f'https://date.nager.at/api/v3/NextPublicHolidays/{country}',
-        f'https://date.nager.at/api/v3/PublicHolidays/2025/{country}',
+        "https://date.nager.at/api/v3/PublicHolidays/2025/IN",
+        "https://date.nager.at/Api/v2/PublicHolidays/2025/IN",
+        "https://date.nager.at/Api/v3/PublicHolidays/2025/AT",
     ]
+    try:
+        resp = None
+        for url in urls_to_try:
+            try:
+                resp = requests.get(url, timeout=10)
+                print(f"[holidays_api] GET {url} -> {resp.status_code}")
+                resp.raise_for_status()
 
-    resp = None
-    for url in urls_to_try:
-        try:
-            resp = requests.get(url, timeout=10, headers=headers)
-            print(f"[holidays_api] GET {url} -> {resp.status_code}")
-            resp.raise_for_status()
-            try:
-                data = resp.json()
-            except ValueError:
-                print(f"[holidays_api] JSON decode failed from {url}: {resp.text[:300]}")
-                continue
-            if isinstance(data, list) and data:
-                # optional: filter out past dates
-                today = date.today()
-                def parse_date(item):
-                    try:
-                        return datetime.strptime(item.get('date',''), '%Y-%m-%d').date()
-                    except Exception:
-                        return None
-                upcoming = [h for h in data if (d:=parse_date(h)) is None or d >= today]
-                upcoming.sort(key=lambda it: parse_date(it) or date.max)
-                return JsonResponse(upcoming, safe=False)
-            print(f"[holidays_api] No list data returned from {url}")
-        except requests.RequestException as e:
-            snippet = ''
-            try:
-                snippet = (resp.text or '')[:300] if resp is not None else ''
-            except Exception:
+                try:
+                    data = resp.json()
+                except ValueError:
+                    print(f"[holidays_api] JSON decode failed from {url}: {resp.text[:300]}")
+                    continue
+
+                if isinstance(data, list) and data:
+                    today = date.today()
+
+                    def parse_date(item):
+                        try:
+                            return datetime.strptime(item.get('date', ''), '%Y-%m-%d').date()
+                        except Exception:
+                            return None
+
+                    upcoming = [h for h in data if (d := parse_date(h)) is None or d >= today]
+                    upcoming.sort(key=lambda it: parse_date(it) or date.max)
+                    return JsonResponse(upcoming, safe=False)
+
+                print(f"[holidays_api] No list data returned from {url}")
+
+            except requests.RequestException as e:
                 snippet = ''
-            print(f"[holidays_api] RequestException for {url}: {e}; snippet: {snippet}")
-            continue
+                try:
+                    snippet = (resp.text or '')[:300] if resp is not None else ''
+                except Exception:
+                    pass
+                print(f"[holidays_api] RequestException for {url}: {e}; snippet: {snippet}")
+                continue
 
-    # static fallback (so UI shows something)
-    fallback = [
-        {"date":"2025-01-26","localName":"Republic Day","name":"Republic Day","countryCode":"IN"},
-        {"date":"2025-03-29","localName":"Holi","name":"Holi","countryCode":"IN"},
-        {"date":"2025-08-15","localName":"Independence Day","name":"Independence Day","countryCode":"IN"},
-        {"date":"2025-10-02","localName":"Gandhi Jayanti","name":"Gandhi Jayanti","countryCode":"IN"},
-        {"date":"2025-12-25","localName":"Christmas Day","name":"Christmas Day","countryCode":"IN"},
-    ]
-    print("[holidays_api] Returning static fallback after upstream failures.")
-    return JsonResponse(fallback, safe=False)
+        # static fallback
+        fallback = [
+            {"date": "2025-01-26", "localName": "Republic Day", "name": "Republic Day", "countryCode": "IN"},
+            {"date": "2025-03-29", "localName": "Holi", "name": "Holi", "countryCode": "IN"},
+            {"date": "2025-08-15", "localName": "Independence Day", "name": "Independence Day", "countryCode": "IN"},
+            {"date": "2025-10-02", "localName": "Gandhi Jayanti", "name": "Gandhi Jayanti", "countryCode": "IN"},
+            {"date": "2025-12-25", "localName": "Christmas Day", "name": "Christmas Day", "countryCode": "IN"},
+        ]
+        print("[holidays_api] Returning static fallback after upstream failures.")
+        return JsonResponse(fallback, safe=False)
+
+    except Exception as e:
+        print(f"[holidays_api] Unexpected error: {e}")
+        traceback.print_exc()
+        return JsonResponse({'error': 'Internal server error', 'detail': str(e)}, status=502)
+
 def loginp(request):
     if request.method=="POST":
         # handle POST submission here (validate form, authenticate user, etc.)
